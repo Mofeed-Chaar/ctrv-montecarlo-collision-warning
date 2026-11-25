@@ -212,6 +212,77 @@ Pairs below 1 % are SAFE and not drawn. In the example both predicted ellipses o
 inside the same zone, so most Monte-Carlo samples give overlapping boxes and the pair is
 marked CRITICAL.
 
+## Zones – where collisions are evaluated
+
+### Map and image size
+
+All processing uses one top-view image of the intersection (`img_size`,
+`pixels_per_meter` in `config/parameters.py`):
+
+| Property | Value |
+|----------|-------|
+| Image size | **1600 × 1600 px** (`sample/305_rev.png`) |
+| Scale | **16 px = 1 m** |
+| Covered area | **100 m × 100 m**, from −50 m to +50 m around the sensor origin |
+| Sensor origin (0, 0) | pixel **(800, 800)** (image centre) |
+| Sensor → pixel | column `u = 800 + 16·y`, row `v = 800 + 16·x` (x points down in the image, y to the right) |
+
+Objects outside the image are ignored.
+
+### What a zone does
+
+![Zones](img/zones.png)
+
+A zone is a rectangle in **image pixels** `(x1, y1, x2, y2)` = top-left and
+bottom-right corner (`zones` and `collect_zones` in `config/parameters.py`).
+
+- The **trajectory prediction** (Gaussian after 1 s) is computed for **every** object in
+  the image, regardless of the zones.
+- The **collision probability** is computed **only inside the zones**: a Monte-Carlo
+  sample counts only if the sampled positions of *both* objects lie inside the same
+  zone (see *Algorithm*, section 4).
+- Every zone is evaluated separately. A pair can therefore raise an alarm in more than
+  one zone; `area_number` in the CSV tells which zone.
+- Zones are used to focus on the conflict areas of the intersection (crossing paths,
+  turning lanes, crosswalks) and to avoid false alarms between vehicles that only pass
+  each other closely in parallel lanes or wait in a queue.
+
+**Current zones** (sizes in metres; sensor x/y ranges from `python draw_zones.py`):
+
+| Zone | `zones` – visualization.py | Size | `collect_zones` – collect_data.py | Size |
+|------|----------------------------|------|-----------------------------------|------|
+| 1 | (800, 550, 1050, 750) | 15.6 × 12.5 m | (920, 450, 1050, 750) | 8.1 × 18.8 m |
+| 2 | (650, 550, 800, 700) | 9.4 × 9.4 m | (650, 550, 800, 700) | 9.4 × 9.4 m |
+| 3 | (500, 550, 650, 780) | 9.4 × 14.4 m | (500, 550, 650, 780) | 9.4 × 14.4 m |
+| 4 | (450, 350, 650, 500) | 12.5 × 9.4 m | (450, 300, 700, 500) | 15.6 × 12.5 m |
+| 5 | (550, 780, 750, 900) | 12.5 × 7.5 m | – | – |
+
+(size = width × height of the rectangle in the image.)
+
+### Evaluating the whole map
+
+To compute collisions everywhere instead of only in selected areas, use one zone that
+covers the whole image:
+
+```python
+# config/parameters.py
+self.zones         = [(0, 0, 1600, 1600)]   # visualization.py
+self.collect_zones = [(0, 0, 1600, 1600)]   # collect_data.py
+```
+
+Then `P_zone ≈ P_global` (both objects are always "inside"). Expect more alarms –
+also from queues and parallel lanes – and a longer run time, because every pair of
+objects in the image is simulated.
+
+### Changing or adding zones
+
+1. Edit `zones` / `collect_zones` in `config/parameters.py` (pixel coordinates; a point
+   at sensor position `(x, y)` metres is at pixel `(800 + 16·y, 800 + 16·x)`).
+2. Run `python draw_zones.py` – it redraws `img/zones.png` and prints every zone in
+   pixels and metres, so the new zones can be checked on the map.
+3. The notebook `intersection_area.ipynb` can be used to try out rectangles
+   interactively.
+
 ## Project structure
 
 | File | Purpose |
@@ -223,6 +294,7 @@ marked CRITICAL.
 | `drow_gaussian.py` | Draws the predicted Gaussian (99 % region) on the image |
 | `proccess.py` | Coordinate conversion (1 m = 16 px, image 1600×1600) and drawing helpers |
 | `config/parameters.py` | Zones, colours, Δt, per-class motion parameters, data path |
+| `draw_zones.py` | Draws the zones on the map → `img/zones.png` |
 | `drow_points.py` | Utility: accumulate all detections on one image |
 | `intersection_area.ipynb` | Notebook used to define the intersection zones |
 | `sample/305_rev.png` | Background map of the intersection |
