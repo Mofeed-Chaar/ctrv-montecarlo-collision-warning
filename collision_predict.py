@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from proccess import get_shifted_coordinate
+from process import get_shifted_coordinate
 from trajectory import predict_gaussians_for_objects
 
 
