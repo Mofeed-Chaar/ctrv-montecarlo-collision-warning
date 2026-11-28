@@ -14,7 +14,7 @@ from config import parameters
 from utils import get_json_file
 
 
-from proccess import (
+from process import (
 	get_possition,
 	get_shifted_coordinate,
 	put_titles_images,
