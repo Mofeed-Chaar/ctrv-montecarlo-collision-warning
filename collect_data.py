@@ -16,7 +16,7 @@ import tqdm
 import numpy as np
 from config import parameters
 from utils import get_json_file
-from proccess import get_possition, get_shifted_coordinate, inside_image
+from process import get_possition, get_shifted_coordinate, inside_image
 from collision_predict import monte_carlo_all_pairs_collision_px_region, classify_risk
 from trajectory import predict_gaussians_for_objects, wrap_angle
 
